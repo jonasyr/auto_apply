@@ -1,50 +1,99 @@
+# JobSpy LLM Letters Configuration
+# Configuration for automated job search and cover letter generation
+
 search:
+  # Basic search parameters
   query: "Werkstudent Informatik"
-  location: "Mainz, Deutschland"  # Näher zu Sulzheim/Wörrstadt
-  google_search_term: "Werkstudent Informatik Python Data Analytics Deutschland"
-  sources: ["linkedin", "indeed", "google"]
-  results_wanted: 80
-  hours_old: 336       # bis 14 Tage
-  remote: null         # true/false/null (Remote ist für ihn interessant)
-  country_indeed: "Germany"
-  verbose: 2
+  location: "Mainz, Deutschland"
+  
+  # Google-specific search term (required for Google Jobs)
+  google_search_term: "Werkstudent Informatik Python Data Analytics Deutschland since:2025"
+  
+  # Job sources to scrape from
+  # Available: linkedin, indeed, zip_recruiter, glassdoor, google, bayt, bdjobs
+  sources: ["indeed", "linkedin", "google"]
+  
+  # Search parameters
+  results_wanted: 60        # Results per source
+  distance: 50              # Search radius in miles (default: 50)
+  
+  # Time filtering (careful: conflicts with other filters on some sites)
+  # hours_old: 168          # Jobs posted within X hours (7 days = 168 hours)
+  
+  # Job type filtering (conflicts with hours_old on Indeed/LinkedIn)
+  job_type: null            # fulltime, parttime, internship, contract
+  remote: null              # true/false/null for remote preference
+  
+  # Advanced filtering (conflicts with hours_old on Indeed/LinkedIn)
+  # easy_apply: null        # true/false for easy apply jobs only
+  
+  # Site-specific parameters
+  country_indeed: "Germany"          # Required for Indeed/Glassdoor
+  linkedin_fetch_description: false  # Get full descriptions (slower)
+  # linkedin_company_ids: []         # Specific company IDs for LinkedIn
+  
+  # Technical parameters
+  verbose: 1                # 0=errors only, 1=errors+warnings, 2=all logs
+  description_format: "markdown"  # markdown or html
+  # proxies: []             # Format: ['user:pass@host:port'] or ['localhost:8080']
+  # user_agent: ""          # Custom user agent
+  # offset: 0               # Start from specific result offset
 
 scoring:
+  # Keyword scoring weights
   keywords:
-    Python: 4           # Hauptskill
-    Linux: 3
+    # Core skills (high weight)
+    Python: 4
     "Data Analytics": 3
     "Datenanalyse": 3
+    Linux: 3
+    "Werkstudent": 3
+    
+    # Important skills (medium weight)
     SQL: 2
     Docker: 2
     "Business Intelligence": 2
     "Power BI": 2
     Automatisierung: 2
     "IT-Infrastruktur": 2
-    "Werkstudent": 3
     "dual": 2
     "Teilzeit": 2
     "Remote": 2
+    "Machine Learning": 2
+    
+    # Nice to have (low weight)
     Git: 1
     Bash: 1
-    "Machine Learning": 2
     AI: 1
     "Künstliche Intelligenz": 1
-    Energiewende: 1     # Seine Interesse aus der JUWI-Bewerbung
+    Energiewende: 1
     Digitalisierung: 1
-  bonus_remote: 3       # Remote ist für ihn interessant
-  malus_senior: 4       # Er ist Student, keine Senior-Rollen
-  min_score: -5         # Etwas selektiver
-  top_k: 30
+    JavaScript: 1
+    React: 1
+    
+    # Negative keywords (subtracts points)
+    # You can add negative weights for unwanted terms
+    
+  # Bonus/malus scoring
+  bonus_remote: 3           # Extra points for remote jobs
+  malus_senior: 4           # Penalty for senior positions
+  
+  # Filtering
+  min_score: -3             # Minimum score to consider
+  top_k: 25                 # Maximum number of jobs to process
 
 llm:
-  model: "gpt-4o-mini"
-  temperature: 0.7
-  max_tokens: 1000
+  # Model configuration
+  model: "gpt-4o-mini"      # or gpt-4, gpt-3.5-turbo
+  temperature: 0.7          # Creativity (0.0 = deterministic, 1.0 = creative)
+  max_tokens: 1200          # Maximum response length
+  
+  # Language and style
   language: "de"
-  target_length: 1800   # Etwas länger für detailliertere Anschreiben
+  target_length: 1800       # Target character count for cover letters
   tone: "professionell, präzise, selbstbewusst aber respektvoll"
-  # Jonas' spezifischer Kontext
+  
+  # Personal context (customize this!)
   dual_study_context: |
     Ich befinde mich im 5. Semester eines dualen Informatikstudiums an der IU Internationale Hochschule 
     (Abschluss voraussichtlich März 2027) und suche einen neuen Praxispartner ab Oktober 2025. 
@@ -53,10 +102,26 @@ llm:
     Mein Fokus liegt auf datengetriebenen Lösungen, Automatisierung und IT-Infrastruktur.
 
 files:
+  # Template file paths (relative to script directory)
   resume_path: "data/resume.md"
   template_letter_path: "data/template_letter.md"
   example_letter_path: "data/example_letter.md"
 
 output:
+  # Output configuration
   out_dir: "out"
-  save_jobs_csv: true
+  save_jobs_csv: true       # Save all jobs to CSV
+  save_raw_data: true       # Save raw scraping results for debugging
+
+# Advanced settings (usually don't need to change)
+advanced:
+  max_retries: 3            # Retry failed requests
+  request_delay: 1.0        # Delay between requests (seconds)
+  enable_caching: false     # Cache results (experimental)
+  
+# Troubleshooting tips:
+# 1. If only Indeed works: Try simpler search terms, check proxies
+# 2. If no results: Verify location format, try broader search terms
+# 3. If rate limited: Add proxies, increase request_delay
+# 4. LinkedIn issues: Often requires proxies due to aggressive blocking
+# 5. Google Jobs: Requires very specific google_search_term format

@@ -75,6 +75,16 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         }
 
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-section h3 {
+            margin-bottom: 15px;
+            color: #2d3748;
+            font-size: 1.2rem;
+        }
+
         .file-upload {
             border: 3px dashed #667eea;
             border-radius: 20px;
@@ -97,6 +107,11 @@
             background: linear-gradient(135deg, rgba(72, 187, 120, 0.2), rgba(56, 161, 105, 0.2));
         }
 
+        .file-upload.success {
+            border-color: #48bb78;
+            background: linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(56, 161, 105, 0.1));
+        }
+
         .upload-content {
             pointer-events: none;
         }
@@ -116,6 +131,19 @@
         .upload-text p {
             color: #666;
             margin: 0;
+        }
+
+        .upload-status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .status-success {
+            color: #48bb78;
+        }
+
+        .status-error {
+            color: #f56565;
         }
 
         .filter-grid {
@@ -258,6 +286,7 @@
             display: flex;
             gap: 10px;
             margin-top: 15px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -271,6 +300,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-size: 0.9rem;
         }
 
         .btn-primary {
@@ -281,6 +311,11 @@
         .btn-secondary {
             background: #e2e8f0;
             color: #4a5568;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
         }
 
         .btn:hover {
@@ -338,6 +373,7 @@
             font-family: 'Courier New', monospace;
             line-height: 1.6;
             white-space: pre-wrap;
+            font-size: 0.9rem;
         }
 
         .loading {
@@ -355,6 +391,26 @@
             margin-top: 30px;
         }
 
+        .hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
         @media (max-width: 768px) {
             .jobs-grid {
                 grid-template-columns: 1fr;
@@ -366,6 +422,10 @@
             
             .header h1 {
                 font-size: 2rem;
+            }
+            
+            .actions {
+                flex-direction: column;
             }
         }
     </style>
@@ -391,30 +451,43 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="draftsGenerated">-</div>
-                    <div>Anschreiben erstellt</div>
+                    <div>Anschreiben verfügbar</div>
                 </div>
             </div>
         </div>
 
         <div class="controls">
-            <div class="file-upload" id="fileUploadArea">
-                <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
-                <div class="upload-content" onclick="document.getElementById('csvFileInput').click()">
-                    <div class="upload-icon">📁</div>
-                    <div class="upload-text">
-                        <strong>1. jobs.csv hochladen</strong>
-                        <p>Klicken oder Datei hierher ziehen</p>
+            <!-- Step 1: CSV Upload -->
+            <div class="upload-section" id="csvUploadSection">
+                <h3>📊 Schritt 1: Jobs laden</h3>
+                <div class="file-upload" id="fileUploadArea">
+                    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                    <div class="upload-content" onclick="document.getElementById('csvFileInput').click()">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">
+                            <strong>jobs.csv hochladen</strong>
+                            <p>Klicken oder Datei hierher ziehen</p>
+                        </div>
                     </div>
+                    <div id="csvUploadStatus" class="upload-status"></div>
                 </div>
             </div>
 
-            <div class="file-upload" id="draftsUploadArea" style="display: none;">
-                <input type="file" id="draftsFileInput" accept=".txt" multiple style="display: none;">
-                <div class="upload-content" onclick="document.getElementById('draftsFileInput').click()">
-                    <div class="upload-icon">📄</div>
-                    <div class="upload-text">
-                        <strong>2. Anschreiben hochladen (optional)</strong>
-                        <p>Alle .txt-Dateien auswählen (Mehrfachauswahl mit Strg)</p>
+            <!-- Step 2: Drafts Upload -->
+            <div class="upload-section hidden" id="draftsUploadSection">
+                <h3>📄 Schritt 2: Anschreiben laden (optional)</h3>
+                <div class="file-upload" id="draftsUploadArea">
+                    <input type="file" id="draftsFileInput" accept=".txt" multiple style="display: none;">
+                    <div class="upload-content" onclick="document.getElementById('draftsFileInput').click()">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">
+                            <strong>Anschreiben hochladen</strong>
+                            <p>Alle .txt-Dateien auswählen (Mehrfachauswahl mit Strg)</p>
+                        </div>
+                    </div>
+                    <div id="draftsUploadStatus" class="upload-status"></div>
+                    <div class="progress-bar hidden" id="draftsProgress">
+                        <div class="progress-fill" id="draftsProgressFill"></div>
                     </div>
                 </div>
                 <div style="text-align: center; margin-top: 15px;">
@@ -422,7 +495,8 @@
                 </div>
             </div>
 
-            <div class="filter-grid" id="filterControls" style="display: none;">
+            <!-- Step 3: Filters -->
+            <div class="filter-grid hidden" id="filterControls">
                 <div class="filter-group">
                     <label for="searchFilter">🔍 Suche</label>
                     <input type="text" id="searchFilter" placeholder="Titel, Firma, Beschreibung...">
@@ -465,68 +539,160 @@
     </div>
 
     <script>
+        // Global state
         let allJobs = [];
         let filteredJobs = [];
         let availableDrafts = new Map(); // filename -> content
 
-        // CSV laden und parsen
+        // Application state
+        let appState = {
+            csvLoaded: false,
+            draftsLoaded: false,
+            currentStep: 1
+        };
+
+        // Initialize the application
+        function initializeApp() {
+            setupFileUpload();
+            setupEventListeners();
+        }
+
+        // CSV file loading and parsing
         async function loadJobsFromFile(file) {
             try {
+                showUploadStatus('csvUploadStatus', 'Lade CSV-Datei...', 'loading');
+                
                 const csvText = await file.text();
                 
                 Papa.parse(csvText, {
                     header: true,
                     skipEmptyLines: true,
+                    dynamicTyping: true,
                     complete: function(results) {
-                        allJobs = results.data.map(job => ({
-                            ...job,
-                            score: parseInt(job.score) || 0
-                        }));
+                        if (results.errors.length > 0) {
+                            console.warn('CSV parsing warnings:', results.errors);
+                        }
                         
-                        // CSV-Upload-Bereich ausblenden, Drafts-Upload einblenden
-                        document.getElementById('fileUploadArea').style.display = 'none';
-                        document.getElementById('draftsUploadArea').style.display = 'block';
+                        allJobs = results.data
+                            .filter(job => job && (job.title || job.company)) // Filter out empty rows
+                            .map(job => ({
+                                ...job,
+                                score: parseInt(job.score) || 0
+                            }));
                         
-                        initializeFilters();
-                        filterJobs();
-                        updateStats();
-                        renderJobs();
+                        if (allJobs.length === 0) {
+                            showUploadStatus('csvUploadStatus', 'Keine gültigen Jobs in der CSV gefunden', 'error');
+                            return;
+                        }
+                        
+                        showUploadStatus('csvUploadStatus', `✅ ${allJobs.length} Jobs geladen`, 'success');
+                        document.getElementById('fileUploadArea').classList.add('success');
+                        
+                        // Move to next step
+                        appState.csvLoaded = true;
+                        nextStep();
+                    },
+                    error: function(error) {
+                        showUploadStatus('csvUploadStatus', `Fehler beim Parsen: ${error.message}`, 'error');
                     }
                 });
             } catch (error) {
-                alert('❌ Fehler beim Laden der CSV-Datei: ' + error.message);
+                showUploadStatus('csvUploadStatus', `Fehler beim Laden: ${error.message}`, 'error');
             }
         }
 
-        // Draft-Dateien laden
+        // Draft files loading
         async function loadDraftFiles(files) {
-            for (let file of files) {
-                if (file.name.endsWith('.txt')) {
-                    try {
-                        const content = await file.text();
-                        availableDrafts.set(file.name, content);
-                    } catch (error) {
-                        console.warn('Fehler beim Laden von', file.name, error);
+            const txtFiles = Array.from(files).filter(f => f.name.endsWith('.txt'));
+            
+            if (txtFiles.length === 0) {
+                showUploadStatus('draftsUploadStatus', 'Keine .txt-Dateien gefunden', 'error');
+                return;
+            }
+
+            showUploadStatus('draftsUploadStatus', `Lade ${txtFiles.length} Anschreiben...`, 'loading');
+            showProgress('draftsProgress', 0);
+            
+            let loaded = 0;
+            let errors = 0;
+            
+            for (let i = 0; i < txtFiles.length; i++) {
+                const file = txtFiles[i];
+                try {
+                    const content = await file.text();
+                    if (content.trim()) {
+                        availableDrafts.set(file.name, content.trim());
+                        loaded++;
                     }
+                } catch (error) {
+                    console.warn('Fehler beim Laden von', file.name, error);
+                    errors++;
                 }
+                
+                // Update progress
+                const progress = ((i + 1) / txtFiles.length) * 100;
+                showProgress('draftsProgress', progress);
             }
             
-            // Drafts-Upload ausblenden, Filter einblenden
-            document.getElementById('draftsUploadArea').style.display = 'none';
-            document.getElementById('filterControls').style.display = 'grid';
+            hideProgress('draftsProgress');
             
-            renderJobs();
-            updateStats();
+            if (loaded > 0) {
+                showUploadStatus('draftsUploadStatus', `✅ ${loaded} Anschreiben geladen${errors > 0 ? ` (${errors} Fehler)` : ''}`, 'success');
+                document.getElementById('draftsUploadArea').classList.add('success');
+            } else {
+                showUploadStatus('draftsUploadStatus', 'Keine Anschreiben konnten geladen werden', 'error');
+            }
+            
+            // Move to next step
+            appState.draftsLoaded = true;
+            nextStep();
         }
 
-        // Drafts überspringen und direkt Filter anzeigen
+        // Skip draft upload
         function skipDraftUpload() {
-            document.getElementById('draftsUploadArea').style.display = 'none';
-            document.getElementById('filterControls').style.display = 'grid';
-            renderJobs();
+            showUploadStatus('draftsUploadStatus', 'Übersprungen', 'success');
+            appState.draftsLoaded = true;
+            nextStep();
         }
 
-        // File Upload Handler
+        // Progress through application steps
+        function nextStep() {
+            if (appState.csvLoaded && appState.draftsLoaded) {
+                // Show filters and initialize data
+                document.getElementById('csvUploadSection').classList.add('hidden');
+                document.getElementById('draftsUploadSection').classList.add('hidden');
+                document.getElementById('filterControls').classList.remove('hidden');
+                
+                initializeFilters();
+                filterJobs();
+                updateStats();
+                renderJobs();
+            } else if (appState.csvLoaded && !appState.draftsLoaded) {
+                // Show drafts upload
+                document.getElementById('draftsUploadSection').classList.remove('hidden');
+            }
+        }
+
+        // Utility functions for UI feedback
+        function showUploadStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `upload-status status-${type}`;
+        }
+
+        function showProgress(elementId, percentage) {
+            const container = document.getElementById(elementId);
+            const fill = document.getElementById(elementId + 'Fill');
+            
+            container.classList.remove('hidden');
+            fill.style.width = percentage + '%';
+        }
+
+        function hideProgress(elementId) {
+            document.getElementById(elementId).classList.add('hidden');
+        }
+
+        // File upload setup
         function setupFileUpload() {
             const fileInput = document.getElementById('csvFileInput');
             const uploadArea = document.getElementById('fileUploadArea');
@@ -547,85 +713,83 @@
                 }
             });
 
-            // CSV Drag and drop
-            uploadArea.addEventListener('dragover', function(e) {
+            // Setup drag and drop for CSV
+            setupDragAndDrop(uploadArea, fileInput, loadJobsFromFile, '.csv');
+            
+            // Setup drag and drop for drafts
+            setupDragAndDrop(draftsArea, draftsInput, loadDraftFiles, '.txt');
+        }
+
+        // Generic drag and drop setup
+        function setupDragAndDrop(area, input, handler, extension) {
+            area.addEventListener('dragover', function(e) {
                 e.preventDefault();
-                uploadArea.classList.add('dragover');
+                area.classList.add('dragover');
             });
 
-            uploadArea.addEventListener('dragleave', function(e) {
+            area.addEventListener('dragleave', function(e) {
                 e.preventDefault();
-                uploadArea.classList.remove('dragover');
+                area.classList.remove('dragover');
             });
 
-            uploadArea.addEventListener('drop', function(e) {
+            area.addEventListener('drop', function(e) {
                 e.preventDefault();
-                uploadArea.classList.remove('dragover');
+                area.classList.remove('dragover');
                 
-                const files = e.dataTransfer.files;
-                if (files.length > 0 && files[0].name.endsWith('.csv')) {
-                    loadJobsFromFile(files[0]);
-                } else {
-                    alert('❌ Bitte eine CSV-Datei hochladen!');
-                }
-            });
-
-            // Drafts Drag and drop
-            draftsArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                draftsArea.classList.add('dragover');
-            });
-
-            draftsArea.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                draftsArea.classList.remove('dragover');
-            });
-
-            draftsArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                draftsArea.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files);
                 
-                const files = e.dataTransfer.files;
-                const txtFiles = Array.from(files).filter(f => f.name.endsWith('.txt'));
-                if (txtFiles.length > 0) {
-                    loadDraftFiles(txtFiles);
-                } else {
-                    alert('❌ Bitte .txt-Dateien hochladen!');
+                if (extension === '.csv') {
+                    const csvFile = files.find(f => f.name.endsWith('.csv'));
+                    if (csvFile) {
+                        handler(csvFile);
+                    } else {
+                        alert('❌ Bitte eine CSV-Datei hochladen!');
+                    }
+                } else if (extension === '.txt') {
+                    const txtFiles = files.filter(f => f.name.endsWith('.txt'));
+                    if (txtFiles.length > 0) {
+                        handler(txtFiles);
+                    } else {
+                        alert('❌ Bitte .txt-Dateien hochladen!');
+                    }
                 }
             });
         }
 
-        // Dateiname für Draft generieren (muss mit main.py übereinstimmen)
+        // Generate filename for draft (must match Python script)
         function generateDraftFilename(job) {
-            const safeCompany = (job.company || "").replace(/[^a-zA-Z0-9 .\-_()]/g, "_").substring(0, 80);
-            const safeTitle = (job.title || "").replace(/[^a-zA-Z0-9 .\-_()]/g, "_").substring(0, 80);
+            const sanitize = (text) => (text || "").replace(/[^a-zA-Z0-9 .\-_()]/g, "_").substring(0, 80);
+            const safeCompany = sanitize(job.company);
+            const safeTitle = sanitize(job.title);
             return `${safeCompany} - ${safeTitle}.txt`.replace(/\//g, "_").trim();
         }
 
-        // Filter-Dropdowns initialisieren
+        // Initialize filter dropdowns
         function initializeFilters() {
             const companies = [...new Set(allJobs.map(job => job.company).filter(Boolean))].sort();
             const locations = [...new Set(allJobs.map(job => job.location).filter(Boolean))].sort();
 
-            const companySelect = document.getElementById('companyFilter');
-            const locationSelect = document.getElementById('locationFilter');
+            populateSelect('companyFilter', companies);
+            populateSelect('locationFilter', locations);
+        }
 
-            companies.forEach(company => {
-                const option = document.createElement('option');
-                option.value = company;
-                option.textContent = company;
-                companySelect.appendChild(option);
-            });
-
-            locations.forEach(location => {
-                const option = document.createElement('option');
-                option.value = location;
-                option.textContent = location;
-                locationSelect.appendChild(option);
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            
+            // Clear existing options except the first one
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                select.appendChild(optionElement);
             });
         }
 
-        // Jobs filtern
+        // Filter jobs based on current filter settings
         function filterJobs() {
             const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
             const companyFilter = document.getElementById('companyFilter').value;
@@ -633,11 +797,14 @@
             const scoreFilter = document.getElementById('scoreFilter').value;
 
             filteredJobs = allJobs.filter(job => {
-                const matchesSearch = !searchTerm || 
-                    (job.title || "").toLowerCase().includes(searchTerm) ||
-                    (job.company || "").toLowerCase().includes(searchTerm) ||
-                    (job.description || "").toLowerCase().includes(searchTerm);
+                const searchFields = [
+                    job.title || '',
+                    job.company || '',
+                    job.description || '',
+                    job.location || ''
+                ].join(' ').toLowerCase();
                 
+                const matchesSearch = !searchTerm || searchFields.includes(searchTerm);
                 const matchesCompany = !companyFilter || job.company === companyFilter;
                 const matchesLocation = !locationFilter || job.location === locationFilter;
                 const matchesScore = !scoreFilter || job.score >= parseInt(scoreFilter);
@@ -649,63 +816,73 @@
             updateStats();
         }
 
-        // Jobs rendern
+        // Render jobs in the grid
         function renderJobs() {
             const container = document.getElementById('jobsContainer');
             
             if (filteredJobs.length === 0) {
-                container.innerHTML = '<div class="no-results"><h3>🔍 Keine Jobs gefunden</h3><p>Versuche andere Filter-Einstellungen.</p></div>';
+                container.innerHTML = `
+                    <div class="no-results">
+                        <h3>🔍 Keine Jobs gefunden</h3>
+                        <p>Versuche andere Filter-Einstellungen oder lade zuerst die jobs.csv Datei hoch.</p>
+                    </div>
+                `;
                 return;
             }
 
             const jobsHtml = filteredJobs.map(job => {
                 const filename = generateDraftFilename(job);
                 const hasDraft = availableDrafts.has(filename);
-                const scoreClass = job.score < 0 ? 'score-negative' : '';
+                const scoreClass = (job.score || 0) < 0 ? 'score-negative' : '';
 
                 return `
                     <div class="job-card" onclick="toggleDescription(this)">
                         <div class="job-header">
                             <div>
-                                <div class="job-title">${job.title || 'Kein Titel'}</div>
-                                <div class="company">${job.company || 'Unbekannte Firma'}</div>
+                                <div class="job-title">${escapeHtml(job.title || 'Kein Titel')}</div>
+                                <div class="company">${escapeHtml(job.company || 'Unbekannte Firma')}</div>
                             </div>
-                            <div class="score-badge ${scoreClass}">${job.score}</div>
+                            <div class="score-badge ${scoreClass}">${job.score || 0}</div>
                         </div>
                         
                         <div class="job-details">
                             <div class="detail-item">
                                 <span class="detail-icon">📍</span>
-                                <span>${job.location || 'Kein Standort'}</span>
+                                <span>${escapeHtml(job.location || 'Kein Standort')}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-icon">🌐</span>
-                                <span>${job.source || 'Unbekannte Quelle'}</span>
+                                <span>${escapeHtml(job.source || 'Unbekannte Quelle')}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-icon">📅</span>
-                                <span>${job.date_posted || 'Kein Datum'}</span>
+                                <span>${escapeHtml(job.date_posted || 'Kein Datum')}</span>
                             </div>
                         </div>
 
                         ${job.description ? `
                             <div class="job-description">
-                                ${(job.description || '').substring(0, 200)}${job.description.length > 200 ? '...' : ''}
+                                ${escapeHtml((job.description || '').substring(0, 200))}${job.description.length > 200 ? '...' : ''}
                                 ${job.description.length > 200 ? '<button class="expand-btn" onclick="event.stopPropagation(); expandDescription(this)">Mehr anzeigen</button>' : ''}
                             </div>
                         ` : ''}
 
                         <div class="actions">
                             ${hasDraft ? `
-                                <button class="btn btn-primary" onclick="event.stopPropagation(); showDraft('${filename}', '${(job.company || "").replace(/'/g, "\\'")}', '${(job.title || "").replace(/'/g, "\\'")}')">
+                                <button class="btn btn-primary" onclick="event.stopPropagation(); showDraft('${escapeHtml(filename)}', '${escapeHtml(job.company || 'Unknown')}', '${escapeHtml(job.title || 'Unknown')}')">
                                     📄 Anschreiben anzeigen
                                 </button>
                             ` : `
                                 <span style="color: #999; font-size: 0.9rem;">❌ Kein Anschreiben verfügbar</span>
                             `}
-                            <a href="${job.job_url || '#'}" target="_blank" class="btn btn-secondary" onclick="event.stopPropagation()">
+                            <a href="${escapeHtml(job.job_url || '#')}" target="_blank" class="btn btn-secondary" onclick="event.stopPropagation()">
                                 🔗 Job öffnen
                             </a>
+                            ${hasDraft ? `
+                                <button class="btn btn-success" onclick="event.stopPropagation(); copyDraft('${escapeHtml(filename)}')">
+                                    📋 Kopieren
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -714,69 +891,107 @@
             container.innerHTML = `<div class="jobs-grid">${jobsHtml}</div>`;
         }
 
-        // Statistiken aktualisieren
+        // Update statistics display
         function updateStats() {
             document.getElementById('totalJobs').textContent = allJobs.length;
             document.getElementById('filteredJobs').textContent = filteredJobs.length;
             
             const avgScore = filteredJobs.length > 0 ? 
-                (filteredJobs.reduce((sum, job) => sum + job.score, 0) / filteredJobs.length).toFixed(1) : 0;
+                (filteredJobs.reduce((sum, job) => sum + (job.score || 0), 0) / filteredJobs.length).toFixed(1) : '0';
             document.getElementById('avgScore').textContent = avgScore;
             
             document.getElementById('draftsGenerated').textContent = availableDrafts.size;
         }
 
-        // Anschreiben anzeigen
-        async function showDraft(filename, company, title) {
+        // Show draft in modal
+        function showDraft(filename, company, title) {
+            const content = availableDrafts.get(filename);
+            
+            if (!content) {
+                alert('❌ Anschreiben konnte nicht gefunden werden.');
+                return;
+            }
+            
+            document.getElementById('modalTitle').textContent = `Anschreiben: ${company} - ${title}`;
+            document.getElementById('modalContent').textContent = content;
+            document.getElementById('draftModal').style.display = 'block';
+        }
+
+        // Copy draft to clipboard
+        async function copyDraft(filename) {
+            const content = availableDrafts.get(filename);
+            
+            if (!content) {
+                alert('❌ Anschreiben konnte nicht gefunden werden.');
+                return;
+            }
+            
             try {
-                const response = await fetch(filename);
-                const content = await response.text();
+                await navigator.clipboard.writeText(content);
+                // Show temporary success message
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ Kopiert!';
+                button.style.background = 'linear-gradient(135deg, #48bb78, #38a169)';
                 
-                document.getElementById('modalTitle').textContent = `Anschreiben: ${company} - ${title}`;
-                document.getElementById('modalContent').textContent = content;
-                document.getElementById('draftModal').style.display = 'block';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
             } catch (error) {
-                alert('❌ Anschreiben konnte nicht geladen werden.');
+                alert('❌ Kopieren fehlgeschlagen. Bitte manuell auswählen und kopieren.');
             }
         }
 
-        // Modal schließen
+        // Modal functions
         function closeDraftModal() {
             document.getElementById('draftModal').style.display = 'none';
         }
 
-        // Beschreibung erweitern
+        // Expand job description
         function expandDescription(button) {
             const description = button.parentElement;
-            description.classList.add('expanded');
-            description.innerHTML = description.textContent.replace('...Mehr anzeigen', '');
-        }
-
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            setupFileUpload();
-        });
-
-        // Filter Event Listeners
-        document.getElementById('searchFilter').addEventListener('input', filterJobs);
-        document.getElementById('companyFilter').addEventListener('change', filterJobs);
-        document.getElementById('locationFilter').addEventListener('change', filterJobs);
-        document.getElementById('scoreFilter').addEventListener('input', filterJobs);
-
-        // Modal schließen bei Klick außerhalb
-        window.onclick = function(event) {
-            const modal = document.getElementById('draftModal');
-            if (event.target === modal) {
-                closeDraftModal();
+            const job = filteredJobs.find(j => description.closest('.job-card').querySelector('.job-title').textContent.includes(j.title));
+            
+            if (job && job.description) {
+                description.innerHTML = escapeHtml(job.description);
+                description.classList.add('expanded');
             }
         }
 
-        // ESC-Taste zum Schließen
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeDraftModal();
-            }
-        });
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Filter event listeners
+            document.getElementById('searchFilter').addEventListener('input', filterJobs);
+            document.getElementById('companyFilter').addEventListener('change', filterJobs);
+            document.getElementById('locationFilter').addEventListener('change', filterJobs);
+            document.getElementById('scoreFilter').addEventListener('input', filterJobs);
+
+            // Modal close events
+            window.onclick = function(event) {
+                const modal = document.getElementById('draftModal');
+                if (event.target === modal) {
+                    closeDraftModal();
+                }
+            };
+
+            // ESC key to close modal
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeDraftModal();
+                }
+            });
+        }
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
