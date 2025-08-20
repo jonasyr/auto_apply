@@ -44,60 +44,60 @@ def main():
 
     for src in sources:
         try:
+            print(f"[INFO] Scraping {src}...")
+            
+            # Base parameters that all sites use
             kwargs = {
                 "site_name": src,
                 "search_term": search["query"],
                 "location": search.get("location"),
                 "results_wanted": search.get("results_wanted", 60),
-                "hours_old": search.get("hours_old", 336),
-                "country": search.get("country", "DE"),
-                # set verbose to config value (default 2 for detailed logs)
                 "verbose": search.get("verbose", 2),
             }
-            # Forward optional parameters from config to scrape_jobs so the
-            # scrapers can be tuned without code edits.
-            opt = search
-            if opt.get("verbose") is not None:
-                kwargs["verbose"] = int(opt.get("verbose"))
-            if opt.get("google_search_term"):
-                kwargs["google_search_term"] = opt.get("google_search_term")
-            if opt.get("country_indeed"):
-                kwargs["country_indeed"] = opt.get("country_indeed")
-            if opt.get("linkedin_fetch_description") is not None:
-                kwargs["linkedin_fetch_description"] = bool(opt.get("linkedin_fetch_description"))
-            if opt.get("description_format"):
-                kwargs["description_format"] = opt.get("description_format")
-            if opt.get("job_type"):
-                kwargs["job_type"] = opt.get("job_type")
-            if opt.get("easy_apply") is not None:
-                kwargs["easy_apply"] = bool(opt.get("easy_apply"))
-            if opt.get("proxies"):
-                kwargs["proxies"] = opt.get("proxies")
-            if opt.get("user_agent"):
-                kwargs["user_agent"] = opt.get("user_agent")
-            # Support google-specific custom search term if provided
-            if "google_search_term" in search and search.get("google_search_term"):
+            
+            # Add optional parameters if they exist in config
+            if search.get("hours_old"):
+                kwargs["hours_old"] = search.get("hours_old")
+                
+            if search.get("remote") is not None:
+                kwargs["is_remote"] = search.get("remote")
+                
+            if search.get("job_type"):
+                kwargs["job_type"] = search.get("job_type")
+                
+            if search.get("distance"):
+                kwargs["distance"] = search.get("distance")
+                
+            if search.get("easy_apply") is not None:
+                kwargs["easy_apply"] = search.get("easy_apply")
+                
+            if search.get("proxies"):
+                kwargs["proxies"] = search.get("proxies")
+                
+            if search.get("user_agent"):
+                kwargs["user_agent"] = search.get("user_agent")
+                
+            if search.get("description_format"):
+                kwargs["description_format"] = search.get("description_format")
+                
+            if search.get("offset"):
+                kwargs["offset"] = search.get("offset")
+            
+            # Site-specific parameters
+            if src in ["indeed", "glassdoor"] and search.get("country_indeed"):
+                kwargs["country_indeed"] = search.get("country_indeed")
+                
+            if src == "google" and search.get("google_search_term"):
                 kwargs["google_search_term"] = search.get("google_search_term")
-            # Support explicit LinkedIn full-description fetch (may be slower)
-            if "linkedin_fetch_description" in search and search.get("linkedin_fetch_description") is not None:
-                kwargs["linkedin_fetch_description"] = search.get("linkedin_fetch_description")
-                # Expose other useful optional search parameters if set in config
-                optional = [
-                    "google_search_term",
-                    "remote",
-                    "linkedin_fetch_description",
-                    "description_format",
-                    "job_type",
-                    "easy_apply",
-                    "proxies",
-                    "user_agent",
-                    "offset",
-                    "distance",
-                ]
-                for opt in optional:
-                    if opt in search and search.get(opt) is not None:
-                        kwargs[opt] = search.get(opt)
-
+                
+            if src == "linkedin":
+                if search.get("linkedin_fetch_description") is not None:
+                    kwargs["linkedin_fetch_description"] = search.get("linkedin_fetch_description")
+                if search.get("linkedin_company_ids"):
+                    kwargs["linkedin_company_ids"] = search.get("linkedin_company_ids")
+            
+            print(f"[DEBUG] {src} kwargs: {kwargs}")
+            
             df = scrape_jobs(**kwargs)
 
             # Normalize None -> empty and check length
@@ -122,10 +122,18 @@ def main():
                 except Exception as e:
                     print(f"[WARN] could not save raw results for {src}: {e}")
         except Exception as e:
-            print(f"[WARN] {src}: {e}")
+            print(f"[ERROR] {src}: {e}")
+            import traceback
+            print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
 
     if not frames:
         print("Keine Ergebnisse gefunden.")
+        print("\n[DEBUG] Troubleshooting tips:")
+        print("1. Try a more specific location (e.g., 'Berlin' instead of 'Deutschland')")
+        print("2. Try simpler search terms (e.g., 'Python' instead of 'Werkstudent Informatik')")
+        print("3. Check if your search terms exist on the job sites manually")
+        print("4. For Google Jobs, the google_search_term might need adjustment")
+        print("5. Consider using proxies if you're being rate limited")
         return
 
     jobs = (
@@ -134,13 +142,15 @@ def main():
           .reset_index(drop=True)
     )
 
+    print(f"[INFO] Total unique jobs found: {len(jobs)}")
+
     # --- 2) Scoring/Filter ---
     kw = cfg["scoring"]["keywords"]
     bonus_remote = cfg["scoring"].get("bonus_remote", 2)
     malus_senior = cfg["scoring"].get("malus_senior", 3)
     jobs["score"] = jobs.apply(
         lambda r: compute_score(
-            " ".join(str(r.get(k,"")) for k in ["job_title","company","job_description","location"]),
+            " ".join(str(r.get(k,"")) for k in ["title","company","description","location"]),
             kw, bonus_remote, malus_senior
         ), axis=1
     )
@@ -151,6 +161,8 @@ def main():
     # Top-K auswählen (optional min_score)
     min_score = cfg["scoring"].get("min_score", -999)
     jobs_top = jobs[jobs["score"] >= min_score].head(cfg["scoring"].get("top_k", 25)).copy()
+
+    print(f"[INFO] Jobs after filtering: {len(jobs_top)}")
 
     # --- 3) LLM-Generierung ---
     prompt_template = load_text("prompts/cover_letter_prompt.txt")
@@ -163,33 +175,37 @@ def main():
     drafted = 0
     for _, row in tqdm(jobs_top.iterrows(), total=len(jobs_top), desc="Drafting"):
         job = {
-            "job_title": row.get("job_title",""),
+            "job_title": row.get("title",""),
             "company": row.get("company",""),
             "location": row.get("location",""),
-            "job_description": row.get("job_description",""),
+            "job_description": row.get("description",""),
             "source": row.get("source",""),
             "job_url": row.get("job_url",""),
         }
-        text = generate_cover_letter(
-            cfg_llm=llm_cfg,
-            prompt_template=prompt_template,
-            job=job,
-            resume_text=resume_text,
-            template_letter=template_letter,
-            example_letter=example_letter
-        )
+        
+        try:
+            text = generate_cover_letter(
+                cfg_llm=llm_cfg,
+                prompt_template=prompt_template,
+                job=job,
+                resume_text=resume_text,
+                template_letter=template_letter,
+                example_letter=example_letter
+            )
 
-        safe_company = "".join(c if c.isalnum() or c in " .-_()" else "_" for c in job["company"])[:80]
-        safe_title   = "".join(c if c.isalnum() or c in " .-_()" else "_" for c in job["job_title"])[:80]
-        fname = f"{safe_company} - {safe_title}.txt".replace("/", "_").strip()
-        header = (
-            f"{datetime.now().strftime('%d.%m.%Y')}\n"
-            f"{job['company']} – {job['location']}\n"
-            f"Quelle: {job['source']} | URL: {job['job_url']}\n\n"
-        )
-        with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
-            f.write(header + text + "\n")
-        drafted += 1
+            safe_company = "".join(c if c.isalnum() or c in " .-_()" else "_" for c in job["company"])[:80]
+            safe_title   = "".join(c if c.isalnum() or c in " .-_()" else "_" for c in job["job_title"])[:80]
+            fname = f"{safe_company} - {safe_title}.txt".replace("/", "_").strip()
+            header = (
+                f"{datetime.now().strftime('%d.%m.%Y')}\n"
+                f"{job['company']} – {job['location']}\n"
+                f"Quelle: {job['source']} | URL: {job['job_url']}\n\n"
+            )
+            with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
+                f.write(header + text + "\n")
+            drafted += 1
+        except Exception as e:
+            print(f"[WARN] Failed to generate letter for {job['company']}: {e}")
 
     print(f"Fertig: {drafted} Anschreiben-Drafts in '{out_dir}'")
 

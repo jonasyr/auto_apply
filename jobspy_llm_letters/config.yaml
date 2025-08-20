@@ -1,11 +1,13 @@
 search:
   query: "Werkstudent Informatik"
-  location: "Deutschland"
+  location: "Berlin, Deutschland"  # More specific location
+  google_search_term: "Werkstudent Informatik jobs in Berlin Deutschland"  # Specific for Google Jobs
   sources: ["linkedin", "indeed", "google"]
   results_wanted: 60
   hours_old: 336       # bis 14 Tage
   remote: null         # true/false/null
-  country: "DE"
+  country_indeed: "Germany"  # Correct parameter name and value for Indeed
+  verbose: 2           # Keep detailed logging for debugging
 
 scoring:
   keywords:
