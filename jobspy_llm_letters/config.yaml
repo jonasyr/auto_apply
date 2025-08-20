@@ -1,47 +1,61 @@
 search:
   query: "Werkstudent Informatik"
-  location: "Berlin, Deutschland"  # More specific location
-  google_search_term: "Werkstudent Informatik jobs in Berlin Deutschland"  # Specific for Google Jobs
+  location: "Mainz, Deutschland"  # Näher zu Sulzheim/Wörrstadt
+  google_search_term: "Werkstudent Informatik Python Data Analytics Deutschland"
   sources: ["linkedin", "indeed", "google"]
-  results_wanted: 60
+  results_wanted: 80
   hours_old: 336       # bis 14 Tage
-  remote: null         # true/false/null
-  country_indeed: "Germany"  # Correct parameter name and value for Indeed
-  verbose: 2           # Keep detailed logging for debugging
+  remote: null         # true/false/null (Remote ist für ihn interessant)
+  country_indeed: "Germany"
+  verbose: 2
 
 scoring:
   keywords:
-    Python: 3
-    Linux: 2
-    Docker: 2
+    Python: 4           # Hauptskill
+    Linux: 3
+    "Data Analytics": 3
+    "Datenanalyse": 3
     SQL: 2
-    Security: 2
-    "Werkstudent": 2
-    "Teilzeit": 1
-    "Remote": 1
-  bonus_remote: 2
-  malus_senior: 3
-  min_score: -99       # alles rein; nachher filtern
-  top_k: 25            # wie viele Drafts generieren
+    Docker: 2
+    "Business Intelligence": 2
+    "Power BI": 2
+    Automatisierung: 2
+    "IT-Infrastruktur": 2
+    "Werkstudent": 3
+    "dual": 2
+    "Teilzeit": 2
+    "Remote": 2
+    Git: 1
+    Bash: 1
+    "Machine Learning": 2
+    AI: 1
+    "Künstliche Intelligenz": 1
+    Energiewende: 1     # Seine Interesse aus der JUWI-Bewerbung
+    Digitalisierung: 1
+  bonus_remote: 3       # Remote ist für ihn interessant
+  malus_senior: 4       # Er ist Student, keine Senior-Rollen
+  min_score: -5         # Etwas selektiver
+  top_k: 30
 
 llm:
   model: "gpt-4o-mini"
-  # alternativ: "gpt-4o" oder "o4-mini"
-  temperature: 0.6
-  max_tokens: 900
-  language: "de"       # "de" oder "en"
-  target_length: 1500  # ca. Zeichen als Richtwert
-  tone: "präzise, motiviert, professionell, knapp"
-  # Jonas' spezieller Kontext fürs duale Studium:
+  temperature: 0.7
+  max_tokens: 1000
+  language: "de"
+  target_length: 1800   # Etwas länger für detailliertere Anschreiben
+  tone: "professionell, präzise, selbstbewusst aber respektvoll"
+  # Jonas' spezifischer Kontext
   dual_study_context: |
-    Ich befinde mich in einem laufenden dualen Informatikstudium (20 Std/Woche Praxis).
-    Ziel: Wechsel des Praxispartners. Bevorzugt Modell: Werkstudentenähnliche Anstellung,
-    bei der Studiengebühren übernommen werden und ich parallel 20 Std/Woche mitwirke.
+    Ich befinde mich im 5. Semester eines dualen Informatikstudiums an der IU Internationale Hochschule 
+    (Abschluss voraussichtlich März 2027) und suche einen neuen Praxispartner ab Oktober 2025. 
+    Idealerweise eine werkstudentenähnliche Anstellung mit 20 Std/Woche während der Vorlesungszeit 
+    und Vollzeit in den Semesterferien, bei der Studiengebühren übernommen werden. 
+    Mein Fokus liegt auf datengetriebenen Lösungen, Automatisierung und IT-Infrastruktur.
 
 files:
   resume_path: "data/resume.md"
   template_letter_path: "data/template_letter.md"
-  example_letter_path: "data/example_letter.md"  # optional; wenn leer, wird ignoriert
+  example_letter_path: "data/example_letter.md"
 
 output:
   out_dir: "out"

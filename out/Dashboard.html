@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Applications Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-upload {
+            border: 3px dashed #667eea;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .file-upload:hover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            transform: translateY(-2px);
+        }
+
+        .file-upload.dragover {
+            border-color: #48bb78;
+            background: linear-gradient(135deg, rgba(72, 187, 120, 0.2), rgba(56, 161, 105, 0.2));
+        }
+
+        .upload-content {
+            pointer-events: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-text strong {
+            font-size: 1.2rem;
+            color: #2d3748;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .upload-text p {
+            color: #666;
+            margin: 0;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4a5568;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .job-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .job-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        .company {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .score-badge {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .score-negative {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+
+        .job-details {
+            margin: 15px 0;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .detail-icon {
+            margin-right: 8px;
+            width: 16px;
+        }
+
+        .job-description {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            font-size: 0.9rem;
+            color: #4a5568;
+            max-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .job-description.expanded {
+            max-height: none;
+        }
+
+        .expand-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .draft-content {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .jobs-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Job Applications Dashboard</h1>
+            <p>Verwalte deine Bewerbungen smart und effizient</p>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalJobs">-</div>
+                    <div>Gefundene Jobs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="filteredJobs">-</div>
+                    <div>Gefilterte Jobs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgScore">-</div>
+                    <div>Ø Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="draftsGenerated">-</div>
+                    <div>Anschreiben erstellt</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="file-upload" id="fileUploadArea">
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                <div class="upload-content" onclick="document.getElementById('csvFileInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        <strong>1. jobs.csv hochladen</strong>
+                        <p>Klicken oder Datei hierher ziehen</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="file-upload" id="draftsUploadArea" style="display: none;">
+                <input type="file" id="draftsFileInput" accept=".txt" multiple style="display: none;">
+                <div class="upload-content" onclick="document.getElementById('draftsFileInput').click()">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">
+                        <strong>2. Anschreiben hochladen (optional)</strong>
+                        <p>Alle .txt-Dateien auswählen (Mehrfachauswahl mit Strg)</p>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="skipDraftUpload()">⏭️ Überspringen</button>
+                </div>
+            </div>
+
+            <div class="filter-grid" id="filterControls" style="display: none;">
+                <div class="filter-group">
+                    <label for="searchFilter">🔍 Suche</label>
+                    <input type="text" id="searchFilter" placeholder="Titel, Firma, Beschreibung...">
+                </div>
+                <div class="filter-group">
+                    <label for="companyFilter">🏢 Firma</label>
+                    <select id="companyFilter">
+                        <option value="">Alle Firmen</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="locationFilter">📍 Standort</label>
+                    <select id="locationFilter">
+                        <option value="">Alle Standorte</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="scoreFilter">⭐ Min. Score</label>
+                    <input type="number" id="scoreFilter" placeholder="z.B. 5" min="-10" max="50">
+                </div>
+            </div>
+        </div>
+
+        <div id="jobsContainer">
+            <div class="loading">
+                <p>📁 Lade deine jobs.csv Datei hoch, um zu starten</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal für Anschreiben -->
+    <div id="draftModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Anschreiben</h2>
+                <button class="close" onclick="closeDraftModal()">&times;</button>
+            </div>
+            <div id="modalContent" class="draft-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let allJobs = [];
+        let filteredJobs = [];
+        let availableDrafts = new Map(); // filename -> content
+
+        // CSV laden und parsen
+        async function loadJobsFromFile(file) {
+            try {
+                const csvText = await file.text();
+                
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        allJobs = results.data.map(job => ({
+                            ...job,
+                            score: parseInt(job.score) || 0
+                        }));
+                        
+                        // CSV-Upload-Bereich ausblenden, Drafts-Upload einblenden
+                        document.getElementById('fileUploadArea').style.display = 'none';
+                        document.getElementById('draftsUploadArea').style.display = 'block';
+                        
+                        initializeFilters();
+                        filterJobs();
+                        updateStats();
+                        renderJobs();
+                    }
+                });
+            } catch (error) {
+                alert('❌ Fehler beim Laden der CSV-Datei: ' + error.message);
+            }
+        }
+
+        // Draft-Dateien laden
+        async function loadDraftFiles(files) {
+            for (let file of files) {
+                if (file.name.endsWith('.txt')) {
+                    try {
+                        const content = await file.text();
+                        availableDrafts.set(file.name, content);
+                    } catch (error) {
+                        console.warn('Fehler beim Laden von', file.name, error);
+                    }
+                }
+            }
+            
+            // Drafts-Upload ausblenden, Filter einblenden
+            document.getElementById('draftsUploadArea').style.display = 'none';
+            document.getElementById('filterControls').style.display = 'grid';
+            
+            renderJobs();
+            updateStats();
+        }
+
+        // Drafts überspringen und direkt Filter anzeigen
+        function skipDraftUpload() {
+            document.getElementById('draftsUploadArea').style.display = 'none';
+            document.getElementById('filterControls').style.display = 'grid';
+            renderJobs();
+        }
+
+        // File Upload Handler
+        function setupFileUpload() {
+            const fileInput = document.getElementById('csvFileInput');
+            const uploadArea = document.getElementById('fileUploadArea');
+            const draftsInput = document.getElementById('draftsFileInput');
+            const draftsArea = document.getElementById('draftsUploadArea');
+
+            // CSV file input change
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    loadJobsFromFile(e.target.files[0]);
+                }
+            });
+
+            // Drafts file input change
+            draftsInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    loadDraftFiles(e.target.files);
+                }
+            });
+
+            // CSV Drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].name.endsWith('.csv')) {
+                    loadJobsFromFile(files[0]);
+                } else {
+                    alert('❌ Bitte eine CSV-Datei hochladen!');
+                }
+            });
+
+            // Drafts Drag and drop
+            draftsArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                draftsArea.classList.add('dragover');
+            });
+
+            draftsArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                draftsArea.classList.remove('dragover');
+            });
+
+            draftsArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                draftsArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                const txtFiles = Array.from(files).filter(f => f.name.endsWith('.txt'));
+                if (txtFiles.length > 0) {
+                    loadDraftFiles(txtFiles);
+                } else {
+                    alert('❌ Bitte .txt-Dateien hochladen!');
+                }
+            });
+        }
+
+        // Dateiname für Draft generieren (muss mit main.py übereinstimmen)
+        function generateDraftFilename(job) {
+            const safeCompany = (job.company || "").replace(/[^a-zA-Z0-9 .\-_()]/g, "_").substring(0, 80);
+            const safeTitle = (job.title || "").replace(/[^a-zA-Z0-9 .\-_()]/g, "_").substring(0, 80);
+            return `${safeCompany} - ${safeTitle}.txt`.replace(/\//g, "_").trim();
+        }
+
+        // Filter-Dropdowns initialisieren
+        function initializeFilters() {
+            const companies = [...new Set(allJobs.map(job => job.company).filter(Boolean))].sort();
+            const locations = [...new Set(allJobs.map(job => job.location).filter(Boolean))].sort();
+
+            const companySelect = document.getElementById('companyFilter');
+            const locationSelect = document.getElementById('locationFilter');
+
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companySelect.appendChild(option);
+            });
+
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationSelect.appendChild(option);
+            });
+        }
+
+        // Jobs filtern
+        function filterJobs() {
+            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+            const companyFilter = document.getElementById('companyFilter').value;
+            const locationFilter = document.getElementById('locationFilter').value;
+            const scoreFilter = document.getElementById('scoreFilter').value;
+
+            filteredJobs = allJobs.filter(job => {
+                const matchesSearch = !searchTerm || 
+                    (job.title || "").toLowerCase().includes(searchTerm) ||
+                    (job.company || "").toLowerCase().includes(searchTerm) ||
+                    (job.description || "").toLowerCase().includes(searchTerm);
+                
+                const matchesCompany = !companyFilter || job.company === companyFilter;
+                const matchesLocation = !locationFilter || job.location === locationFilter;
+                const matchesScore = !scoreFilter || job.score >= parseInt(scoreFilter);
+
+                return matchesSearch && matchesCompany && matchesLocation && matchesScore;
+            });
+
+            renderJobs();
+            updateStats();
+        }
+
+        // Jobs rendern
+        function renderJobs() {
+            const container = document.getElementById('jobsContainer');
+            
+            if (filteredJobs.length === 0) {
+                container.innerHTML = '<div class="no-results"><h3>🔍 Keine Jobs gefunden</h3><p>Versuche andere Filter-Einstellungen.</p></div>';
+                return;
+            }
+
+            const jobsHtml = filteredJobs.map(job => {
+                const filename = generateDraftFilename(job);
+                const hasDraft = availableDrafts.has(filename);
+                const scoreClass = job.score < 0 ? 'score-negative' : '';
+
+                return `
+                    <div class="job-card" onclick="toggleDescription(this)">
+                        <div class="job-header">
+                            <div>
+                                <div class="job-title">${job.title || 'Kein Titel'}</div>
+                                <div class="company">${job.company || 'Unbekannte Firma'}</div>
+                            </div>
+                            <div class="score-badge ${scoreClass}">${job.score}</div>
+                        </div>
+                        
+                        <div class="job-details">
+                            <div class="detail-item">
+                                <span class="detail-icon">📍</span>
+                                <span>${job.location || 'Kein Standort'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">🌐</span>
+                                <span>${job.source || 'Unbekannte Quelle'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">📅</span>
+                                <span>${job.date_posted || 'Kein Datum'}</span>
+                            </div>
+                        </div>
+
+                        ${job.description ? `
+                            <div class="job-description">
+                                ${(job.description || '').substring(0, 200)}${job.description.length > 200 ? '...' : ''}
+                                ${job.description.length > 200 ? '<button class="expand-btn" onclick="event.stopPropagation(); expandDescription(this)">Mehr anzeigen</button>' : ''}
+                            </div>
+                        ` : ''}
+
+                        <div class="actions">
+                            ${hasDraft ? `
+                                <button class="btn btn-primary" onclick="event.stopPropagation(); showDraft('${filename}', '${(job.company || "").replace(/'/g, "\\'")}', '${(job.title || "").replace(/'/g, "\\'")}')">
+                                    📄 Anschreiben anzeigen
+                                </button>
+                            ` : `
+                                <span style="color: #999; font-size: 0.9rem;">❌ Kein Anschreiben verfügbar</span>
+                            `}
+                            <a href="${job.job_url || '#'}" target="_blank" class="btn btn-secondary" onclick="event.stopPropagation()">
+                                🔗 Job öffnen
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `<div class="jobs-grid">${jobsHtml}</div>`;
+        }
+
+        // Statistiken aktualisieren
+        function updateStats() {
+            document.getElementById('totalJobs').textContent = allJobs.length;
+            document.getElementById('filteredJobs').textContent = filteredJobs.length;
+            
+            const avgScore = filteredJobs.length > 0 ? 
+                (filteredJobs.reduce((sum, job) => sum + job.score, 0) / filteredJobs.length).toFixed(1) : 0;
+            document.getElementById('avgScore').textContent = avgScore;
+            
+            document.getElementById('draftsGenerated').textContent = availableDrafts.size;
+        }
+
+        // Anschreiben anzeigen
+        async function showDraft(filename, company, title) {
+            try {
+                const response = await fetch(filename);
+                const content = await response.text();
+                
+                document.getElementById('modalTitle').textContent = `Anschreiben: ${company} - ${title}`;
+                document.getElementById('modalContent').textContent = content;
+                document.getElementById('draftModal').style.display = 'block';
+            } catch (error) {
+                alert('❌ Anschreiben konnte nicht geladen werden.');
+            }
+        }
+
+        // Modal schließen
+        function closeDraftModal() {
+            document.getElementById('draftModal').style.display = 'none';
+        }
+
+        // Beschreibung erweitern
+        function expandDescription(button) {
+            const description = button.parentElement;
+            description.classList.add('expanded');
+            description.innerHTML = description.textContent.replace('...Mehr anzeigen', '');
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileUpload();
+        });
+
+        // Filter Event Listeners
+        document.getElementById('searchFilter').addEventListener('input', filterJobs);
+        document.getElementById('companyFilter').addEventListener('change', filterJobs);
+        document.getElementById('locationFilter').addEventListener('change', filterJobs);
+        document.getElementById('scoreFilter').addEventListener('input', filterJobs);
+
+        // Modal schließen bei Klick außerhalb
+        window.onclick = function(event) {
+            const modal = document.getElementById('draftModal');
+            if (event.target === modal) {
+                closeDraftModal();
+            }
+        }
+
+        // ESC-Taste zum Schließen
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeDraftModal();
+            }
+        });
+    </script>
+</body>
+</html>
