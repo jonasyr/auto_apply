@@ -8,8 +8,18 @@ from openai import OpenAI
 load_dotenv()
 
 def load_text(path: Optional[str]) -> str:
-    if not path or not os.path.exists(path):
+    if not path:
         return ""
+
+    # If path is relative, resolve it relative to this file's directory so
+    # callers can run the script from the repo root.
+    if not os.path.isabs(path):
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, path)
+
+    if not os.path.exists(path):
+        return ""
+
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
 

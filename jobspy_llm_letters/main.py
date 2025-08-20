@@ -14,8 +14,25 @@ def ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)
 
 def main():
-    with open("config.yaml", "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
+    # Try to find config.yaml relative to this script first, then fall back to CWD.
+    script_dir = os.path.dirname(__file__)
+    candidates = [
+        os.path.join(script_dir, "config.yaml"),
+        "config.yaml",
+    ]
+    cfg = None
+    for p in candidates:
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+            break
+
+    if cfg is None:
+        print("[ERROR] 'config.yaml' not found. Tried the following paths:")
+        for p in candidates:
+            print(f"  - {os.path.abspath(p)}")
+        print("Place 'config.yaml' in the project folder or run this script from the 'jobspy_llm_letters' directory.")
+        return
 
     out_dir = cfg["output"]["out_dir"]
     ensure_dir(out_dir)
