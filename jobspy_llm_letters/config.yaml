@@ -1,0 +1,46 @@
+search:
+  query: "Werkstudent Informatik"
+  location: "Deutschland"
+  sources: ["linkedin", "indeed", "google"]
+  results_wanted: 60
+  hours_old: 336       # bis 14 Tage
+  remote: null         # true/false/null
+  country: "DE"
+
+scoring:
+  keywords:
+    Python: 3
+    Linux: 2
+    Docker: 2
+    SQL: 2
+    Security: 2
+    "Werkstudent": 2
+    "Teilzeit": 1
+    "Remote": 1
+  bonus_remote: 2
+  malus_senior: 3
+  min_score: -99       # alles rein; nachher filtern
+  top_k: 25            # wie viele Drafts generieren
+
+llm:
+  model: "gpt-4o-mini"
+  # alternativ: "gpt-4o" oder "o4-mini"
+  temperature: 0.6
+  max_tokens: 900
+  language: "de"       # "de" oder "en"
+  target_length: 1500  # ca. Zeichen als Richtwert
+  tone: "präzise, motiviert, professionell, knapp"
+  # Jonas' spezieller Kontext fürs duale Studium:
+  dual_study_context: |
+    Ich befinde mich in einem laufenden dualen Informatikstudium (20 Std/Woche Praxis).
+    Ziel: Wechsel des Praxispartners. Bevorzugt Modell: Werkstudentenähnliche Anstellung,
+    bei der Studiengebühren übernommen werden und ich parallel 20 Std/Woche mitwirke.
+
+files:
+  resume_path: "data/resume.md"
+  template_letter_path: "data/template_letter.md"
+  example_letter_path: "data/example_letter.md"  # optional; wenn leer, wird ignoriert
+
+output:
+  out_dir: "out"
+  save_jobs_csv: true
