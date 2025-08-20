@@ -1,43 +1,47 @@
-# JobSpy LLM Letters Configuration
+# JobSpy LLM Letters Configuration - FIXED VERSION
 # Configuration for automated job search and cover letter generation
 
 search:
   # Basic search parameters
   query: "Werkstudent Informatik"
-  location: "Mainz, Deutschland"
+  location: "55286 Sulzheim, Deutschland"  # More specific location with postal code
   
-  # Google-specific search term (required for Google Jobs)
-  google_search_term: "Werkstudent Informatik Python Data Analytics Deutschland since:2025"
+  # Google-specific search term (CRITICAL: Must be very specific)
+  # Copy this EXACTLY from google.com/jobs after applying filters manually
+  google_search_term: "jobs Mainz Werkstudent Informatik"
   
   # Job sources to scrape from
-  # Available: linkedin, indeed, zip_recruiter, glassdoor, google, bayt, bdjobs
   sources: ["indeed", "linkedin", "google"]
   
   # Search parameters
-  results_wanted: 60        # Results per source
-  distance: 50              # Search radius in miles (default: 50)
+  results_wanted: 30        # Reduced for LinkedIn to avoid rate limiting
+  distance: 31              # 31 miles ≈ 50km (miles to km conversion)
   
-  # Time filtering (careful: conflicts with other filters on some sites)
-  # hours_old: 168          # Jobs posted within X hours (7 days = 168 hours)
+  # Time filtering - COMMENTED OUT to avoid conflicts with LinkedIn
+  # hours_old: 168          # Conflicts with LinkedIn
   
-  # Job type filtering (conflicts with hours_old on Indeed/LinkedIn)
+  # Job type filtering (use this OR hours_old, never both)
   job_type: null            # fulltime, parttime, internship, contract
   remote: null              # true/false/null for remote preference
   
-  # Advanced filtering (conflicts with hours_old on Indeed/LinkedIn)
-  # easy_apply: null        # true/false for easy apply jobs only
-  
   # Site-specific parameters
   country_indeed: "Germany"          # Required for Indeed/Glassdoor
-  linkedin_fetch_description: false  # Get full descriptions (slower)
-  # linkedin_company_ids: []         # Specific company IDs for LinkedIn
+  linkedin_fetch_description: false  # Keep false for speed
+  
+  # CRITICAL: Proxies for LinkedIn (without these, LinkedIn will fail)
+  # Option 1: Free proxies (less reliable)
+  yamlproxies:
+    - "proxy-server.scraperapi.com:8001"
+    - "rotating-residential.proxyrack.com:9000"
+  
+  # Option 2: Comment out proxies to test without LinkedIn first
+  # If LinkedIn fails, uncomment and add real proxy servers
+  # proxies: []
   
   # Technical parameters
   verbose: 1                # 0=errors only, 1=errors+warnings, 2=all logs
-  description_format: "markdown"  # markdown or html
-  # proxies: []             # Format: ['user:pass@host:port'] or ['localhost:8080']
-  # user_agent: ""          # Custom user agent
-  # offset: 0               # Start from specific result offset
+  description_format: "markdown"
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
 scoring:
   # Keyword scoring weights
@@ -47,7 +51,9 @@ scoring:
     "Data Analytics": 3
     "Datenanalyse": 3
     Linux: 3
-    "Werkstudent": 3
+    "Werkstudent": 4        # Increased weight for this important term
+    "duales Studium": 3
+    "dual": 3
     
     # Important skills (medium weight)
     SQL: 2
@@ -56,10 +62,16 @@ scoring:
     "Power BI": 2
     Automatisierung: 2
     "IT-Infrastruktur": 2
-    "dual": 2
-    "Teilzeit": 2
-    "Remote": 2
+    "Teilzeit": 3           # Important for your situation
+    "20 Stunden": 3
     "Machine Learning": 2
+    
+    # Location preferences (bonus points)
+    Mainz: 2
+    Wiesbaden: 1
+    Frankfurt: 1
+    "Remote": 3
+    "Homeoffice": 3
     
     # Nice to have (low weight)
     Git: 1
@@ -71,22 +83,29 @@ scoring:
     JavaScript: 1
     React: 1
     
-    # Negative keywords (subtracts points)
-    # You can add negative weights for unwanted terms
+    # Negative keywords (penalties)
+    "Vollzeit": -2          # Penalty for full-time only positions
+    "40 Stunden": -2
+    "Senior": -4            # Strong penalty for senior positions
+    "Lead": -3
+    "Leiter": -3
+    "5+ Jahre": -3
+    "mehrjährig": -2
+    "abgeschlossen": -2     # Penalty for requiring completed degree
     
   # Bonus/malus scoring
   bonus_remote: 3           # Extra points for remote jobs
   malus_senior: 4           # Penalty for senior positions
   
   # Filtering
-  min_score: -3             # Minimum score to consider
+  min_score: -1             # Slightly higher minimum score
   top_k: 25                 # Maximum number of jobs to process
 
 llm:
   # Model configuration
-  model: "gpt-4o-mini"      # or gpt-4, gpt-3.5-turbo
-  temperature: 0.7          # Creativity (0.0 = deterministic, 1.0 = creative)
-  max_tokens: 1200          # Maximum response length
+  model: "gpt-4o-mini"      # Fast and cost-effective
+  temperature: 0.7          # Good balance of creativity and consistency
+  max_tokens: 1200          # Adequate for cover letters
   
   # Language and style
   language: "de"
@@ -100,6 +119,7 @@ llm:
     Idealerweise eine werkstudentenähnliche Anstellung mit 20 Std/Woche während der Vorlesungszeit 
     und Vollzeit in den Semesterferien, bei der Studiengebühren übernommen werden. 
     Mein Fokus liegt auf datengetriebenen Lösungen, Automatisierung und IT-Infrastruktur.
+    Ich wohne in 55286 Sulzheim (bei Mainz) und bin bereit für Hybridarbeit oder Remote-Arbeit.
 
 files:
   # Template file paths (relative to script directory)
@@ -113,15 +133,34 @@ output:
   save_jobs_csv: true       # Save all jobs to CSV
   save_raw_data: true       # Save raw scraping results for debugging
 
-# Advanced settings (usually don't need to change)
+# Advanced settings
 advanced:
   max_retries: 3            # Retry failed requests
-  request_delay: 1.0        # Delay between requests (seconds)
+  request_delay: 2.0        # Increased delay between requests (helps with rate limiting)
   enable_caching: false     # Cache results (experimental)
-  
-# Troubleshooting tips:
-# 1. If only Indeed works: Try simpler search terms, check proxies
-# 2. If no results: Verify location format, try broader search terms
-# 3. If rate limited: Add proxies, increase request_delay
-# 4. LinkedIn issues: Often requires proxies due to aggressive blocking
-# 5. Google Jobs: Requires very specific google_search_term format
+
+# TROUBLESHOOTING GUIDE:
+# 
+# 1. LinkedIn Issues:
+#    - LinkedIn REQUIRES proxies for consistent results
+#    - Reduce results_wanted to 10-20 for LinkedIn
+#    - Use different proxy servers
+#    - Try running without LinkedIn first, then add it back
+#
+# 2. Google Jobs Issues:
+#    - Go to google.com/jobs manually
+#    - Enter your search terms and apply filters
+#    - Copy the EXACT search string that appears
+#    - Paste it as google_search_term above
+#
+# 3. No Results:
+#    - Try broader search terms first
+#    - Test with just Indeed initially
+#    - Check if location format is correct
+#    - Increase distance if needed
+#
+# 4. Rate Limiting (429 errors):
+#    - Increase request_delay to 3-5 seconds
+#    - Reduce results_wanted
+#    - Add working proxy servers
+#    - Wait between scraping sessions
