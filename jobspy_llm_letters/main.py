@@ -44,17 +44,41 @@ def main():
 
     for src in sources:
         try:
-            df = scrape_jobs(
-                site_name=src,
-                search_term=search["query"],
-                location=search.get("location"),
-                results_wanted=search.get("results_wanted", 60),
-                hours_old=search.get("hours_old", 336),
-                is_remote=search.get("remote"),
-                country=search.get("country", "DE")
-            )
-            df["source"] = src
-            frames.append(df)
+            kwargs = {
+                "site_name": src,
+                "search_term": search["query"],
+                "location": search.get("location"),
+                "results_wanted": search.get("results_wanted", 60),
+                "hours_old": search.get("hours_old", 336),
+                "country": search.get("country", "DE"),
+            }
+            # Only include is_remote if explicitly set in config (not null)
+            if "remote" in search and search.get("remote") is not None:
+                kwargs["is_remote"] = search.get("remote")
+
+            df = scrape_jobs(**kwargs)
+
+            # Normalize None -> empty and check length
+            n = 0
+            if df is None:
+                print(f"[INFO] {src}: returned None")
+            else:
+                try:
+                    n = len(df)
+                except Exception:
+                    n = 0
+            print(f"[INFO] {src}: {n} results")
+
+            # Save raw results for debugging if any rows
+            if df is not None and n > 0:
+                df["source"] = src
+                frames.append(df)
+                raw_path = os.path.join(out_dir, f"raw_{src}.csv")
+                try:
+                    df.to_csv(raw_path, index=False, encoding="utf-8")
+                    print(f"[DEBUG] saved raw results to {raw_path}")
+                except Exception as e:
+                    print(f"[WARN] could not save raw results for {src}: {e}")
         except Exception as e:
             print(f"[WARN] {src}: {e}")
 
