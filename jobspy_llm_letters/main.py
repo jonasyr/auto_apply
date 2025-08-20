@@ -51,10 +51,52 @@ def main():
                 "results_wanted": search.get("results_wanted", 60),
                 "hours_old": search.get("hours_old", 336),
                 "country": search.get("country", "DE"),
+                # set verbose to config value (default 2 for detailed logs)
+                "verbose": search.get("verbose", 2),
             }
-            # Only include is_remote if explicitly set in config (not null)
-            if "remote" in search and search.get("remote") is not None:
-                kwargs["is_remote"] = search.get("remote")
+            # Forward optional parameters from config to scrape_jobs so the
+            # scrapers can be tuned without code edits.
+            opt = search
+            if opt.get("verbose") is not None:
+                kwargs["verbose"] = int(opt.get("verbose"))
+            if opt.get("google_search_term"):
+                kwargs["google_search_term"] = opt.get("google_search_term")
+            if opt.get("country_indeed"):
+                kwargs["country_indeed"] = opt.get("country_indeed")
+            if opt.get("linkedin_fetch_description") is not None:
+                kwargs["linkedin_fetch_description"] = bool(opt.get("linkedin_fetch_description"))
+            if opt.get("description_format"):
+                kwargs["description_format"] = opt.get("description_format")
+            if opt.get("job_type"):
+                kwargs["job_type"] = opt.get("job_type")
+            if opt.get("easy_apply") is not None:
+                kwargs["easy_apply"] = bool(opt.get("easy_apply"))
+            if opt.get("proxies"):
+                kwargs["proxies"] = opt.get("proxies")
+            if opt.get("user_agent"):
+                kwargs["user_agent"] = opt.get("user_agent")
+            # Support google-specific custom search term if provided
+            if "google_search_term" in search and search.get("google_search_term"):
+                kwargs["google_search_term"] = search.get("google_search_term")
+            # Support explicit LinkedIn full-description fetch (may be slower)
+            if "linkedin_fetch_description" in search and search.get("linkedin_fetch_description") is not None:
+                kwargs["linkedin_fetch_description"] = search.get("linkedin_fetch_description")
+                # Expose other useful optional search parameters if set in config
+                optional = [
+                    "google_search_term",
+                    "remote",
+                    "linkedin_fetch_description",
+                    "description_format",
+                    "job_type",
+                    "easy_apply",
+                    "proxies",
+                    "user_agent",
+                    "offset",
+                    "distance",
+                ]
+                for opt in optional:
+                    if opt in search and search.get(opt) is not None:
+                        kwargs[opt] = search.get(opt)
 
             df = scrape_jobs(**kwargs)
 
